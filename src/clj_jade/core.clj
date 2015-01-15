@@ -2,7 +2,7 @@
   (:require [clojure.string :refer [split capitalize lower-case]]
             [clojure.walk :refer [postwalk]])
   (:import [de.neuland.jade4j JadeConfiguration]
-           [de.neuland.jade4j.template FileTemplateLoader]))
+           [de.neuland.jade4j.template FileTemplateLoader ClasspathTemplateLoader]))
 
 ;; Maintains the configuration to be used when rendering templates.
 (def config (atom (JadeConfiguration.)))
@@ -10,6 +10,10 @@
 (defn set-template-dir
   [config template-dir-path]
   (.setTemplateLoader config (FileTemplateLoader. template-dir-path "UTF-8")))
+
+(defn set-classpath-loader
+  [config]
+  (.setTemplateLoader config (new ClasspathTemplateLoader)))
 
 (defn pretty-print
   [config is-pretty]
@@ -28,6 +32,9 @@
   (let [jade-config (JadeConfiguration.)]
     (when (:template-dir opts)
       (set-template-dir jade-config (:template-dir opts)))
+
+    (when (:classpath-loader opts)
+      (set-classpath-loader jade-config))
 
     (when (:pretty-print opts)
       (pretty-print jade-config (:pretty-print opts)))
@@ -72,5 +79,6 @@
     (postwalk (fn [x] (if (map? x) (into {} (map f x)) x)) m)))
 
 (defn render
-  [template-path data]
-  (.renderTemplate @config (template template-path) (camel-back-keys data)))
+  ([template-path] (render template-path {}))
+  ([template-path data]
+  (.renderTemplate @config (template template-path) (clojure.walk/stringify-keys data))))
